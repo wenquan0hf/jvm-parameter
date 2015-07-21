@@ -10,8 +10,10 @@
 
 参数 - XX:+PrintGC（或者 - verbose:gc）开启了简单 GC 日志模式，为每一次新生代（young generation）的 GC 和每一次的 Full GC 打印一行信息。下面举例说明：
 
->[GC 246656K->243120K(376320K), 0.0929090 secs]  
+```
+[GC 246656K->243120K(376320K), 0.0929090 secs]
 [Full GC 243120K->241951K(629760K), 1.5589690 secs]
+```
 
 每行开始首先是 GC 的类型（可以是 “GC” 或者 “Full GC”），然后是在 GC 之前和 GC 之后已使用的堆空间，再然后是当前的堆容量，最后是 GC 持续的时间（以秒计）。
 
@@ -23,9 +25,12 @@
 
 如果不是使用 - XX:+PrintGC，而是 - XX:PrintGCDetails，就开启了详细 GC 日志模式。在这种模式下，日志格式和所使用的 GC 算法有关。我们首先看一下使用 Throughput 垃圾收集器在 young generation 中生成的日志。为了便于阅读这里将一行日志分为多行并使用缩进。
 
->[GC  
-[PSYoungGen: 142816K->10752K(142848K)] 246648K->243136K(375296K), 0.0935090 secs]   
+```
+[GC
+    [PSYoungGen: 142816K->10752K(142848K)] 246648K->243136K(375296K), 0.0935090 secs
+]
 [Times: user=0.55 sys=0.10, real=0.09 secs]
+```
 
 我们可以很容易发现：这是一次在 young generation 中的 GC，它将已使用的堆空间从 246648K 减少到了 243136K，用时 0.0935090 秒。此外我们还可以得到更多的信息：所使用的垃圾收集器（即 PSYoungGen）、young generation 的大小和使用情况（在这个例子中 “PSYoungGen” 垃圾收集器将 young generation 所使用的堆空间从 142816K 减少到 10752K）。
 
@@ -35,11 +40,13 @@
 
 接下来看一下 Full GC 的输出日志
 
->[Full GC
-	[PSYoungGen: 10752K->9707K(142848K)]
-    [ParOldGen: 232384K->232244K(485888K)]  243136K->241951K(628736K)  
-[PSPermGen: 3162K->3161K(21504K)], 1.5265450 secs
+```
+[Full GC
+    [PSYoungGen: 10752K->9707K(142848K)]
+    [ParOldGen: 232384K->232244K(485888K)] 243136K->241951K(628736K)
+    [PSPermGen: 3162K->3161K(21504K)], 1.5265450 secs
 ]
+```
 
 除了关于 young generation 的详细信息，日志也提供了 old generation 和 permanent generation 的详细信息。对于这三个 generations，一样也可以看到所使用的垃圾收集器、堆空间的大小、GC 前后的堆使用情况。需要注意的是显示堆空间的大小等于 young generation 和 old generation 各自堆空间的和。以上面为例，堆空间总共占用了 241951K，其中 9707K 在 young generation，232244K 在 old generation。Full GC 持续了大约 1.53 秒，用户空间的 CPU 执行时间为 10.96 秒，说明 GC 使用了多线程（和之前一样 8 个线程）。
 

@@ -10,11 +10,11 @@
 
 -Xms 和 - Xmx 可以说是最流行的 JVM 参数，它们可以允许我们指定 JVM 的初始和最大堆内存大小。一般来说，这两个参数的数值单位是 Byte，但同时它们也支持使用速记符号，比如 “k” 或者 “K” 代表 “kilo”，“m” 或者 “M” 代表 “mega”，“g” 或者 “G” 代表 “giga”。举个例子，下面的命令启动了一个初始化堆内存为 128M，最大堆内存为 2G，名叫 “MyApp” 的 Java 应用程序。
 
-<code class="plain">java -Xms128m -Xmx2g MyApp</code>
+`java -Xms128m -Xmx2g MyApp`
 
 在实际使用过程中，初始化堆内存的大小通常被视为堆内存大小的下界。然而 JVM 可以在运行时动态的调整堆内存的大小，所以理论上来说我们有可能会看到堆内存的大小小于初始化堆内存的大小。但是即使在非常低的堆内存使用下，我也从来没有遇到过这种情况。这种行为将会方便开发者和系统管理员，因为我们可以通过将 “-Xms” 和 “-Xmx” 设置为相同大小来获得一个固定大小的堆内存。 -Xms 和 - Xmx 实际上是 - XX:InitialHeapSize 和 - XX:MaxHeapSize 的缩写。我们也可以直接使用这两个参数，它们所起得效果是一样的：
 
-<code class="plain">$ java -XX:InitialHeapSize=128m -XX:MaxHeapSize=2g MyApp</code>
+`$ java -XX:InitialHeapSize=128m -XX:MaxHeapSize=2g MyApp`
 
 需要注意的是，所有 JVM 关于初始 \ 最大堆内存大小的输出都是使用它们的完整名称：“InitialHeapSize” 和 “InitialHeapSize”。所以当你查询一个正在运行的 JVM 的堆内存大小时，如使用 - XX:+PrintCommandLineFlags 参数或者通过 JMX 查询，你应该寻找 “InitialHeapSize” 和 “InitialHeapSize” 标志而不是 “Xms” 和 “Xmx”。
 
@@ -30,13 +30,13 @@
 
 当内存溢发生时，我们甚至可以可以执行一些指令，比如发个 E-mail 通知管理员或者执行一些清理工作。通过 - XX:OnOutOfMemoryError 这个参数我们可以做到这一点，这个参数可以接受一串指令和它们的参数。在这里，我们将不会深入它的细节，但我们提供了它的一个例子。在下面的例子中，当内存溢出错误发生的时候，我们会将堆内存快照写到 /tmp/heapdump.hprof 文件并且在 JVM 的运行目录执行脚本 cleanup.sh
 
-<code class="plain">$ java -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -XX:OnOutOfMemoryError =</code>
+`$ java -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -XX:OnOutOfMemoryError =`
 
 **-XX:PermSize and -XX:MaxPermSize**
 
 永久代在堆内存中是一块独立的区域，它包含了所有 JVM 加载的类的对象表示。为了成功运行应用程序，JVM 会加载很多类（因为它们依赖于大量的第三方库，而这又依赖于更多的库并且需要从里面将类加载进来）这就需要增加永久代的大小。我们可以使用 - XX:PermSize 和 - XX:MaxPermSize 来达到这个目的。其中 - XX:MaxPermSize 用于设置永久代大小的最大值，-XX:PermSize 用于设置永久代初始大小。下面是一个简单的例子：
 
-<code class="plain">$ java -XX:PermSize=128m -XX:MaxPermSize=256m MyApp</code>
+`$ java -XX:PermSize=128m -XX:MaxPermSize=256m MyApp`
 
 请注意，这里设置的永久代大小并不会被包括在使用参数 - XX:MaxHeapSize 设置的堆内存大小中。也就是说，通过 - XX:MaxPermSize 设置的永久代内存可能会需要由参数 - XX:MaxHeapSize 设置的堆内存以外的更多的一些堆内存。
 

@@ -1,9 +1,6 @@
-
 # JVM 类型以及编译器模式
 
 原文地址：[https://blog.codecentric.de/en/2012/07/useful-jvm-flags-part-1-jvm-types-and-compiler-modes/](https://blog.codecentric.de/en/2012/07/useful-jvm-flags-part-1-jvm-types-and-compiler-modes/)
-
-**译者**：赵峰，iDestiny，	 **校对**：郭蕾
 
 现在的 JVM 运行 Java 程序（和其它的兼容性语言）时在高效性和稳定性方面做的非常出色。自适应内存管理、垃圾收集、及时编译、动态类加载、锁优化——这里仅仅列举了某些场景下会发生的神奇的事情，但他们几乎不会直接与普通的程序员相关。在运行时，JVM 会不断的计算并优化应用或者应用的某些部分。
 
@@ -19,10 +16,12 @@
 
 当我们调用 “java” 命令时，我们如何才能知道我们安装的是哪个版本的 Java 和 JVM 类型呢？在同一个系统中安装多个 Java，如果不注意的话有运行错误 JVM 的风险。在不同的 Linux 版本上预装 JVM 这方面，我承认现在已经变的比以前好很多了。幸运的是，我们现在可以使用 - version 参数，它可以打印出正在使用的 JVM 的信息。例如：
 
-`$ java -version ` 
-`java version "1.6.0_24"`  
-`Java(TM) SE Runtime Environment (build 1.6.0_24-b07) ` 
-`Java HotSpot(TM) Client VM (build 19.1-b02, mixed mode, sharing)`
+```
+$ java -version
+java version "1.6.0_24"
+Java(TM) SE Runtime Environment (build 1.6.0_24-b07)
+Java HotSpot(TM) Client VM (build 19.1-b02, mixed mode, sharing)
+```
 
 输出显示的是 Java 版本号 (1.6.0_24) 和 JRE 确切的 build 号 (1.6.0_24-b07)。我们也可以看到 JVM 的名字 (HotSpot)、类型 (client) 和 build ID（19.1-b02) ）。除此之外，我们还知道 JVM 以混合模式 (mixed mode) 在运行，这是 HotSpot 默认的运行模式，意味着 JVM 在运行时可以动态的把字节码编译为本地代码。我们也可以看到类数据共享（class data sharing）是开启的，类数据共享（class data sharing）是一种在只读缓存（在 jsa 文件中，”Java Shared Archive”）中存储 JRE 的系统类，被所有 Java 进程的类加载器用来当做共享资源。类数据共享 (Class data sharing) 可能在经常从 jar 文档中读所有的类数据的情况下显示出性能优势。
 
@@ -34,53 +33,31 @@
 
 注意混合模式也有他自己的参数，-Xmixed。最新版本的 HotSpot 的默认模式是混合模式，所以我们不需要特别指定这个标记。我们来用对象填充 HashMap 然后检索它的结果做一个简单的用例。每一个例子，它的运行时间都是很多次运行的平均时间。
 
-<div style="color: #110000;">
-<table border="1" cellspacing="0" cellpadding="2">
-<tbody>
-<tr>
-<td>
-<pre>$ java <span style="color: #660033;">-server</span> <span style="color: #660033;">-showversion</span> Benchmark
-java version <span style="color: #ff0000;">"1.6.0_24"</span>
-Java<span style="font-weight: bold; color: #7a0874;">(</span>TM<span style="font-weight: bold; color: #7a0874;">)</span> SE Runtime Environment <span style="font-weight: bold; color: #7a0874;">(</span>build 1.6.0_24-b07<span style="font-weight: bold; color: #7a0874;">)</span>
-Java HotSpot<span style="font-weight: bold; color: #7a0874;">(</span>TM<span style="font-weight: bold; color: #7a0874;">)</span> Server VM <span style="font-weight: bold; color: #7a0874;">(</span>build 19.1-b02, mixed mode<span style="font-weight: bold; color: #7a0874;">)</span>
-&nbsp;
-Average time: 0.856449 seconds</pre>
-</td>
-</tr>
-</tbody>
-</table>
-</div>
+```
+$ java -server -showversion Benchmark
+java version "1.6.0_24"
+Java(TM) SE Runtime Environment (build 1.6.0_24-b07)
+Java HotSpot(TM) Server VM (build 19.1-b02, mixed mode)
+ 
+Average time: 0.856449 seconds
+```
 
-<div style="color: #110000;">
-<table border="1" cellspacing="0" cellpadding="2">
-<tbody>
-<tr>
-<td>
-<pre>$ java <span style="color: #660033;">-server</span> <span style="color: #660033;">-showversion</span> <span style="color: #660033;">-Xcomp</span> Benchmark
-java version <span style="color: #ff0000;">"1.6.0_24"</span>
-Java<span style="font-weight: bold; color: #7a0874;">(</span>TM<span style="font-weight: bold; color: #7a0874;">)</span> SE Runtime Environment <span style="font-weight: bold; color: #7a0874;">(</span>build 1.6.0_24-b07<span style="font-weight: bold; color: #7a0874;">)</span>
-Java HotSpot<span style="font-weight: bold; color: #7a0874;">(</span>TM<span style="font-weight: bold; color: #7a0874;">)</span> Server VM <span style="font-weight: bold; color: #7a0874;">(</span>build 19.1-b02, compiled mode<span style="font-weight: bold; color: #7a0874;">)</span>
-&nbsp;
-Average time: 0.950892 seconds</pre>
-</td>
-</tr>
-</tbody>
-</table>
-</div>
+```
+$ java -server -showversion -Xcomp Benchmark
+java version "1.6.0_24"
+Java(TM) SE Runtime Environment (build 1.6.0_24-b07)
+Java HotSpot(TM) Server VM (build 19.1-b02, compiled mode)
+ 
+Average time: 0.950892 seconds
+```
 
-<table border="1" cellspacing="0" cellpadding="2">
-<tbody>
-<tr>
-<td>
-<pre>$ java <span style="color: #660033;">-server</span> <span style="color: #660033;">-showversion</span> <span style="color: #660033;">-Xint</span> Benchmark
-java version <span style="color: #ff0000;">"1.6.0_24"</span>
-Java<span style="font-weight: bold; color: #7a0874;">(</span>TM<span style="font-weight: bold; color: #7a0874;">)</span> SE Runtime Environment <span style="font-weight: bold; color: #7a0874;">(</span>build 1.6.0_24-b07<span style="font-weight: bold; color: #7a0874;">)</span>
-Java HotSpot<span style="font-weight: bold; color: #7a0874;">(</span>TM<span style="font-weight: bold; color: #7a0874;">)</span> Server VM <span style="font-weight: bold; color: #7a0874;">(</span>build 19.1-b02, interpreted mode<span style="font-weight: bold; color: #7a0874;">)</span>
-&nbsp;
-Average time: 7.622285 seconds</pre>
-</td>
-</tr>
-</tbody>
-</table>
+```
+$ java -server -showversion -Xint Benchmark
+java version "1.6.0_24"
+Java(TM) SE Runtime Environment (build 1.6.0_24-b07)
+Java HotSpot(TM) Server VM (build 19.1-b02, interpreted mode)
+ 
+Average time: 7.622285 seconds
+```
 
 当然也有很多使 - Xcomp 表现很好的例子。特别是运行时间长的应用，我强烈建议大家使用 JVM 的默认设置，让 JIT 编译器充分发挥其动态潜力，毕竟 JIT 编译器是组成 JVM 最重要的组件之一。事实上，正是因为 JVM 在这方面的进展才让 Java 不再那么慢。

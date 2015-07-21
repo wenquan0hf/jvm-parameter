@@ -22,33 +22,27 @@ HotSpot JVM 提供了三类参数。第一类包括了标准参数。顾名思�
 
 当一个 Java 应用运行时，非常容易查看 JIT 编译工作。通过设置 - XX:+PrintCompilation，我们可以简单的输出一些关于从字节码转化成本地代码的编译过程。我们来看一个服务端 VM 运行的例子：
 
-<table border="1" cellspacing="0" cellpadding="2">
-<tbody>
-<tr>
-<td>
-<pre>$ java -server -XX:+PrintCompilation Benchmark
+```
+$ java -server -XX:+PrintCompilation Benchmark
   1       java.lang.String::hashCode (64 bytes)
   2       java.lang.AbstractStringBuilder::stringSizeOfInt (21 bytes)
   3       java.lang.Integer::getChars (131 bytes)
-  4       java.lang.Object::&lt;init&gt; (1 bytes)
+  4       java.lang.Object::<init> (1 bytes)
 ---   n   java.lang.System::arraycopy (static)
   5       java.util.HashMap::indexFor (6 bytes)
   6       java.lang.Math::min (11 bytes)
   7       java.lang.String::getChars (66 bytes)
   8       java.lang.AbstractStringBuilder::append (60 bytes)
-  9       java.lang.String::&lt;init&gt; (72 bytes)
+  9       java.lang.String::<init> (72 bytes)
  10       java.util.Arrays::copyOfRange (63 bytes)
  11       java.lang.StringBuilder::append (8 bytes)
- 12       java.lang.AbstractStringBuilder::&lt;init&gt; (12 bytes)
+ 12       java.lang.AbstractStringBuilder::<init> (12 bytes)
  13       java.lang.StringBuilder::toString (17 bytes)
- 14       java.lang.StringBuilder::&lt;init&gt; (18 bytes)
+ 14       java.lang.StringBuilder::<init> (18 bytes)
  15       java.lang.StringBuilder::append (8 bytes)
 [...]
- 29       java.util.regex.Matcher::reset (83 bytes)</pre>
-</td>
-</tr>
-</tbody>
-</table>
+ 29       java.util.regex.Matcher::reset (83 bytes)
+```
 
 每当一个方法被编译，就输出一行 - XX:+PrintCompilation。每行都包含顺序号（唯一的编译任务 ID）和已编译方法的名称和大小。因此，顺序号 1，代表编译 String 类中的 hashCode 方法到原生代码的信息。根据方法的类型和编译任务打印额外的信息。例如，本地的包装方法前方会有”n” 参数，像上面的 System::arraycopy 一样。注意这样的方法不会包含顺序号和方法占用的大小，因为它不需要编译为本地代码。同样可以看到被重复编译的方法，例如 StringBuilder::append 顺序号为 11 和 15。输出在顺序号 29 时停止 ，这表明在这个 Java 应用运行时总共需要编译 29 个方法。
 
@@ -58,22 +52,16 @@ JIT 编译器输出帮助我们理解客户端 VM 与服务端 VM 的一些区�
 
 通过另外设置 - XX:+CITime，我们可以在 JVM 关闭时得到各种编译的统计信息。让我们看一下一个特定部分的统计：
 
-<table border="1" cellspacing="0" cellpadding="2">
-<tbody>
-<tr>
-<td>
-<pre>$ java -server -XX:+CITime Benchmark
+```
+$ java -server -XX:+CITime Benchmark
 [...]
 Accumulated compiler times (for compiled methods only)
 ------------------------------------------------
   Total compilation time   :  0.178 s
     Standard compilation   :  0.129 s, Average : 0.004
     On stack replacement   :  0.049 s, Average : 0.024
-[...]</pre>
-</td>
-</tr>
-</tbody>
-</table>
+[...]
+```
 
 总共用了 0.178 s（在 29 个编译任务上）。这些，”on stack replacement” 占用了 0.049 s，即编译的方法目前在堆栈上用去的时间。这种技术并不是简单的实现性能显示，实际上它是非常重要的。没有”on stack replacement”，方法如果要执行很长时间（比如，它们包含了一个长时间运行的循环），它们运行时将不会被它们编译过的副本替换。
 
@@ -81,34 +69,28 @@ Accumulated compiler times (for compiled methods only)
 
 在本系列的第一部分，我们已经学了 - Xint 和 - Xcomp 参数。结合使用 - XX:+PrintCompilation 和 - XX:+CITime，在这两个情况下（校对者注，客户端 VM 与服务端 VM），我们能对 JIT 编译器的行为有更好的了解。使用 - Xint，-XX:+PrintCompilation 在这两种情况下会产生 0 行输出。同样的，使用 - XX:+CITime 时，证实在编译上没有花费时间。现在换用 - Xcomp，输出就完全不同了。在使用客户端 VM 时会产生 726 行输出，然后没有更多的，这是因为每个相关的方法都被编译了。使用服务端 VM，我们甚至能得到 993 行输出，这告诉我们更积极的优化被执行了。同样，JVM 拆机 (JVM teardown) 时打印出的统计显示了两个 VM 的巨大不同。考虑服务端 VM 的运行：
 
-<table border="1" cellspacing="0" cellpadding="2">
-<tbody>
-<tr>
-<td>
-<pre>$ java -server -Xcomp -XX:+CITime Benchmark
+```
+$ java -server -Xcomp -XX:+CITime Benchmark
 [...]
 Accumulated compiler times (for compiled methods only)
 ------------------------------------------------
   Total compilation time   :  1.567 s
     Standard compilation   :  1.567 s, Average : 0.002
     On stack replacement   :  0.000 s, Average : -1.#IO
-[...]</pre>
-</td>
-</tr>
-</tbody>
-</table>
+[...]
+```
 
 使用 - Xcomp 编译用了 1.567 s，这是使用默认设置（即，混合模式）的 10 倍。同样，应用程序的运行速度要比用混合模式的慢。相比较之下，客户端 VM 使用 - Xcomp 编译 726 个方法只用了 0.208 s，甚至低于使用 - Xcomp 的服务端 VM。
 
 补充一点，这里没有”on stack replacement” 发生，因为每一个方法在第一次调用时被编译了。损坏的输出 “Average: -1.#IO”（正确的是: 0）再一次表明了，非标准化的输出参数不是非常可靠。
 
--XX:+UnlockExperimentalVMOptions
+`-XX:+UnlockExperimentalVMOptions`
 
 有些时候当设置一个特定的 JVM 参数时，JVM 会在输出 “Unrecognized VM option” 后终止。如果发生了这种情况，你应该首先检查你是否输错了参数。然而，如果参数输入是正确的，并且 JVM 并不识别，你或许需要设置 - XX:+UnlockExperimentalVMOptions 来解锁参数。我不是非常清楚这个安全机制的作用，但我猜想这个参数如果不正确使用可能会对 JVM 的稳定性有影响（例如，他们可能会过多的写入 debug 输出的一些日志文件）。
 
 有一些参数只是在 JVM 开发时用，并不实际用于 Java 应用。如果一个参数不能被 -XX:+UnlockExperimentalVMOptions 开启，但是你真的需要使用它，此时你可以尝试使用 debug 版本的 JVM。对于 Java 6 HotSpot JVM 你可以从[这里找到](https://java.net/projects/jdk6/download.html)。
 
--XX:+LogCompilation and -XX:+PrintOptoAssembly
+`-XX:+LogCompilation and -XX:+PrintOptoAssembly`
 
 如果你在一个场景中发现使用 -XX:+PrintCompilation，不能够给你足够详细的信息，你可以使用 -XX:+LogCompilation 把扩展的编译输出写到 “hotspot.log” 文件中。除了编译方法的很多细节之外，你也可以看到编译器线程启动的任务。注意 - XX:+LogCompilation 需要使用 - XX:+UnlockExperimentalVMOptions 来解锁。
 

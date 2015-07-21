@@ -13,7 +13,7 @@ SUN/Oracle 的 HotSpot JVM 又把新生代进一步划分为 3 个区域：一�
 
 基于大多数新生对象都会在 GC 中被收回的假设。新生代的 GC 使用复制算法。在 GC 前 To 幸存区 (survivor) 保持清空，对象保存在 Eden 和 From 幸存区 (survivor) 中，GC 运行时，Eden 中的幸存对象被复制到 To 幸存区 (survivor)。针对 From 幸存区 (survivor) 中的幸存对象，会考虑对象年龄，如果年龄没达到阀值 (tenuring threshold)，对象会被复制到 To 幸存区 (survivor)。如果达到阀值对象被复制到老年代。复制阶段完成后，Eden 和 From 幸存区中只保存死对象，可以视为清空。如果在复制过程中 To 幸存区被填满了，剩余的对象会被复制到老年代中。最后 From 幸存区和 To 幸存区会调换下名字，在下次 GC 时，To 幸存区会成为 From 幸存区。
 
-![](/images/1.png)
+![](images/1.png)
 
 [https://blog.codecentric.de/files/2011/08/young_gc.png](https://blog.codecentric.de/files/2011/08/young_gc.png)
 
@@ -24,6 +24,7 @@ SUN/Oracle 的 HotSpot JVM 又把新生代进一步划分为 3 个区域：一�
 现在应该能理解为什么新生代大小非常重要了 (译者，有另外一种说法：新生代大小并不重要，影响 GC 的因素主要是幸存对象的数量)，如果新生代过小，会导致新生对象很快就晋升到老年代中，在老年代中对象很难被回收。如果新生代过大，会发生过多的复制过程。我们需要找到一个合适大小，不幸的是，要想获得一个合适的大小，只能通过不断的测试调优。这就需要 JVM 参数了
 
 **-XX:NewSize and -XX:MaxNewSize**
+
 就像可以通过参数 (-Xms and -Xmx) 指定堆大小一样，可以通过参数指定新生代大小。设置 XX:MaxNewSize 参数时，应该考虑到新生代只是整个堆的一部分，新生代设置的越大，老年代区域就会减少。一般不允许新生代比老年代还大，因为要考虑 GC 时最坏情况，所有对象都晋升到老年代。(译者: 会发生 OOM 错误) -XX:MaxNewSize 最大可以设置为 - Xmx/2。
 
 考虑性能，一般会通过参数 -XX:NewSize 设置新生代初始大小。如果知道新生代初始分配的对象大小 (经过监控)，这样设置会有帮助，可以节省新生代自动扩展的消耗。
@@ -34,7 +35,7 @@ SUN/Oracle 的 HotSpot JVM 又把新生代进一步划分为 3 个区域：一�
 
 如果针对新生代，同时定义绝对值和相对值，绝对值将起作用。下面例子：  
 
-$ java -XX:NewSize=32m -XX:MaxNewSize=512m -XX:NewRatio=3 MyApp
+`$ java -XX:NewSize=32m -XX:MaxNewSize=512m -XX:NewRatio=3 MyApp`
 
 以上设置，JVM 会尝试为新生代分配四分之一的堆大小，但不会小于 32MB 或大于 521MB
 
@@ -50,7 +51,7 @@ $ java -XX:NewSize=32m -XX:MaxNewSize=512m -XX:NewRatio=3 MyApp
 
 **-XX:+PrintTenuringDistribution**
 
-参数 -XX:+PrintTenuringDistribution 指定 JVM 在每次新生代 GC 时，输出幸存区中对象的年龄分布。例如:
+参数 `-XX:+PrintTenuringDistribution` 指定 JVM 在每次新生代 GC 时，输出幸存区中对象的年龄分布。例如:
 
 Desired survivor size 75497472 bytes， new threshold 15 (max 15)
 
@@ -79,16 +80,16 @@ Desired survivor size 75497472 bytes， new threshold 2 (max 15)
 
 有多种方式， 设置新生代行为，没有通用准则。我们必须清楚以下 2 中情况：
 
-1。 如果从年龄分布中发现，有很多对象的年龄持续增长，在到达老年代阀值之前。这表示 -XX:MaxTenuringThreshold 设置过大
-2。 如果 -XX:MaxTenuringThreshold 的值大于 1，但是很多对象年龄从未大于 1。应该看下幸存区的目标使用率。如果幸存区使用率从未到达，这表示对象都被 GC 回收，这正是我们想要的。 如果幸存区使用率经常达到，有些年龄超过 1 的对象被移动到老年代中。这种情况，可以尝试调整幸存区大小或目标使用率。
+1. 如果从年龄分布中发现，有很多对象的年龄持续增长，在到达老年代阀值之前。这表示 -XX:MaxTenuringThreshold 设置过大
+2. 如果 -XX:MaxTenuringThreshold 的值大于 1，但是很多对象年龄从未大于 1。应该看下幸存区的目标使用率。如果幸存区使用率从未到达，这表示对象都被 GC 回收，这正是我们想要的。 如果幸存区使用率经常达到，有些年龄超过 1 的对象被移动到老年代中。这种情况，可以尝试调整幸存区大小或目标使用率。
 
 **-XX:+NeverTenure and -XX:+AlwaysTenure**
 
-最后， 我们介绍 2 个颇为少见的参数，对应 2 种极端的新生代 GC 情况。设置参数 -XX:+NeverTenure，对象永远不会晋升到老年代。当我们确定不需要老年代时，可以这样设置。这样设置风险很大， 并且会浪费至少一半的堆内存。相反设置参数 -XX:+AlwaysTenure，表示没有幸存区，所有对象在第一次 GC 时，会晋升到老年代。  
+最后，我们介绍 2 个颇为少见的参数，对应 2 种极端的新生代 GC 情况。设置参数 -XX:+NeverTenure，对象永远不会晋升到老年代。当我们确定不需要老年代时，可以这样设置。这样设置风险很大， 并且会浪费至少一半的堆内存。相反设置参数 -XX:+AlwaysTenure，表示没有幸存区，所有对象在第一次 GC 时，会晋升到老年代。  
 
 没有合理的场景使用这个参数。可以在测试环境中，看下这样设置会发生什么有趣的事。但是并不推荐使用这些参数。
 
 结论
 适当的配置新生代非常重要，有相当多的参数可以设置新生代。然而，单独调整新生代，而不考虑老年代是不可能优化成功的。当调整堆和 GC 设置时，我们总是应该同时考虑新生代和老年代。
 
-在本系列的下面 2 部分，我们将讨论 HotSpot JVM 中老年代 GC 策略， 我们会学习 “吞吐量 GC 收集器” 和 “并发低延迟 GC 收集器”， 也会了解收集器的基本准则，算法和调整参数。
+在本系列的下面 2 部分，我们将讨论 HotSpot JVM 中老年代 GC 策略，我们会学习 “吞吐量 GC 收集器” 和 “并发低延迟 GC 收集器”，也会了解收集器的基本准则，算法和调整参数。
